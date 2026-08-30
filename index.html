@@ -2,7 +2,15 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#111827"><title>الراية للعطور — إدارة سحابية</title>
+<meta name="theme-color" content="#111827">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="الراية للعطور">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>الراية للعطور — إدارة سحابية</title>
 <link rel="stylesheet" href="style.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
@@ -16,7 +24,7 @@
   <div class="brand header-brand"><div class="brand-logo"><img src="alraya-logo.jpg" alt="شعار الراية للعطور"></div><div><h1>الراية للعطور</h1><span>إدارة المحل والمخزن</span></div></div>
   <div class="header-right">
     <button class="primary" id="newBtn">＋ إضافة منتج</button>
-    <button id="headerSearch" class="header-search" type="button" title="بحث">🔎<span>بحث</span></button>
+    <button id="installBtn" class="header-search" type="button" title="تثبيت التطبيق" style="display:none">📲<span>تثبيت التطبيق</span></button><button id="headerSearch" class="header-search" type="button" title="بحث">🔎<span>بحث</span></button>
   </div>
 </header>
 <div id="cloudStatus" class="status"></div>
@@ -505,6 +513,41 @@ alter table public.shortages add column if not exists photo text default '';
 notify pgrst, 'reload schema';
 </script>
 <script src="app.js"></script>
+
+<script>
+(function(){
+  if (!("serviceWorker" in navigator)) return;
+  window.addEventListener("load", function(){
+    navigator.serviceWorker.register("./sw.js").catch(function(err){
+      console.warn("PWA service worker registration failed:", err);
+    });
+  });
+
+  var deferredPrompt = null;
+  var installBtn = document.getElementById("installBtn");
+
+  window.addEventListener("beforeinstallprompt", function(e){
+    e.preventDefault();
+    deferredPrompt = e;
+    if (installBtn) installBtn.style.display = "inline-flex";
+  });
+
+  if (installBtn) {
+    installBtn.addEventListener("click", async function(){
+      if (!deferredPrompt) return;
+      deferredPrompt.prompt();
+      try { await deferredPrompt.userChoice; } catch(e) {}
+      deferredPrompt = null;
+      installBtn.style.display = "none";
+    });
+  }
+
+  window.addEventListener("appinstalled", function(){
+    deferredPrompt = null;
+    if (installBtn) installBtn.style.display = "none";
+  });
+})();
+</script>
 </body></html>
 <script>
 // Database migration note: run supabase-setup.sql in Supabase SQL Editor.
