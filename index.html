@@ -2,10 +2,11 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#111827"><title>الراية للعطور — إدارة سحابية</title>
+<meta name="theme-color" content="#111827"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="الراية للعطور"><link rel="manifest" href="./manifest.json"><link rel="apple-touch-icon" href="./icon-192.png"><title>الراية للعطور — إدارة سحابية</title>
 <link rel="stylesheet" href="style.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
+<script src="pwa.js" defer></script>
 </head>
 <body>
 <header class="app-header">
@@ -19,6 +20,23 @@
     <button id="headerSearch" class="header-search" type="button" title="بحث">🔎<span>بحث</span></button>
   </div>
 </header>
+
+<!-- زر تثبيت الموقع كتطبيق / إنشاء اختصار -->
+<div id="pwaInstallBar" class="pwa-install-bar" role="dialog" aria-label="تثبيت الراية للعطور">
+  <div class="pwa-install-icon">⇩</div>
+  <div class="pwa-install-copy"><strong>التثبيت وإنشاء اختصار</strong><span>ثبّت الراية للعطور على الشاشة الرئيسية كأنه تطبيق</span></div>
+  <button id="pwaInstallBtn" type="button">تثبيت</button>
+  <button id="pwaInstallClose" class="pwa-install-close" type="button" aria-label="إخفاء">×</button>
+</div>
+<div id="pwaHelp" class="pwa-help" hidden>
+  <div class="pwa-help-box">
+    <button id="pwaHelpClose" class="pwa-install-close" type="button" aria-label="إغلاق">×</button>
+    <div class="pwa-help-icon">📲</div>
+    <h2>تثبيت الراية للعطور</h2>
+    <p id="pwaHelpText">من قائمة المتصفح اختر <b>تثبيت التطبيق</b> أو <b>إضافة إلى الشاشة الرئيسية</b>.</p>
+    <button id="pwaHelpOk" class="primary" type="button">فهمت</button>
+  </div>
+</div>
 <div id="cloudStatus" class="status"></div>
 <nav id="nav"><button class="on" data-page="home">الرئيسية</button><button data-page="inventory">المخزن</button><button data-page="mixes">خلطات العطور</button><button data-page="shortages">النقوصات</button><button data-page="debts">الديون</button><button data-page="notes">الملاحظات</button><button data-page="activity">سجل النشاط</button></nav>
 <main>
