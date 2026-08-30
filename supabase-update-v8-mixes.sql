@@ -7,7 +7,7 @@ create table if not exists public.mixes (
   gender text not null check (gender in ('رجالي','نسائي','كلا الجنسين')),
   photo text default '',
   photo_path text default '',
-  created_by uuid references auth.users(id),
+  created_by uuid references auth.users(id) on delete set null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

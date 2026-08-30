@@ -31,8 +31,8 @@ create table if not exists public.products (
   aliases text[] not null default '{}',
   photo text default '',
   photo_path text default '',
-  created_by uuid references auth.users(id),
-  updated_by uuid references auth.users(id),
+  created_by uuid references auth.users(id) on delete set null,
+  updated_by uuid references auth.users(id) on delete set null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -47,7 +47,7 @@ create table if not exists public.sales (
   qty numeric not null,
   total numeric not null,
   buy numeric not null default 0,
-  created_by uuid references auth.users(id),
+  created_by uuid references auth.users(id) on delete set null,
   created_at timestamptz not null default now()
 );
 
@@ -61,7 +61,7 @@ create table if not exists public.purchases (
   invoice text default '',
   note text default '',
   photo text default '',
-  created_by uuid references auth.users(id),
+  created_by uuid references auth.users(id) on delete set null,
   created_at timestamptz not null default now()
 );
 
@@ -69,16 +69,16 @@ create table if not exists public.notes (
   id uuid primary key default gen_random_uuid(),
   title text not null,
   text text not null,
-  created_by uuid references auth.users(id),
+  created_by uuid references auth.users(id) on delete set null,
   created_at timestamptz not null default now()
 );
 
 
 create table if not exists public.shortages (
-  id uuid primary key default gen_random_uuid(), name text not null, qty numeric not null default 1, priority text not null default 'normal', note text default '', photo text default '', purchased boolean not null default false, created_by uuid references auth.users(id), created_at timestamptz not null default now(), updated_at timestamptz not null default now()
+  id uuid primary key default gen_random_uuid(), name text not null, qty numeric not null default 1, priority text not null default 'normal', note text default '', photo text default '', purchased boolean not null default false, created_by uuid references auth.users(id) on delete set null, created_at timestamptz not null default now(), updated_at timestamptz not null default now()
 );
 create table if not exists public.debts (
-  id uuid primary key default gen_random_uuid(), person text not null, phone text default '', amount numeric not null default 0, paid numeric not null default 0, note text default '', created_by uuid references auth.users(id), created_at timestamptz not null default now(), updated_at timestamptz not null default now()
+  id uuid primary key default gen_random_uuid(), person text not null, phone text default '', amount numeric not null default 0, paid numeric not null default 0, note text default '', created_by uuid references auth.users(id) on delete set null, created_at timestamptz not null default now(), updated_at timestamptz not null default now()
 );
 
 create table if not exists public.activity_log (
@@ -336,7 +336,7 @@ create table if not exists public.mixes (
   id uuid primary key default gen_random_uuid(), name text not null,
   gender text not null check (gender in ('رجالي','نسائي','كلا الجنسين')),
   desc text default '', photo text default '', photo_path text default '',
-  created_by uuid references auth.users(id), created_at timestamptz not null default now(),
+  created_by uuid references auth.users(id) on delete set null, created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 alter table public.mixes add column if not exists desc text default '';

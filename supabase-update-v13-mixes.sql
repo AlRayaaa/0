@@ -11,7 +11,7 @@ create table if not exists public.mixes (
   desc text default '',
   photo text default '',
   photo_path text default '',
-  created_by uuid references auth.users(id),
+  created_by uuid references auth.users(id) on delete set null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

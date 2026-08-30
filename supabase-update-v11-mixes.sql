@@ -3,7 +3,7 @@ create table if not exists public.mixes (
   id uuid primary key default gen_random_uuid(), name text not null,
   gender text not null check (gender in ('رجالي','نسائي','كلا الجنسين')),
   desc text default '', photo text default '', photo_path text default '',
-  created_by uuid references auth.users(id), created_at timestamptz not null default now(),
+  created_by uuid references auth.users(id) on delete set null, created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 alter table public.mixes add column if not exists desc text default '';
