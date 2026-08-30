@@ -1,0 +1,122 @@
+-- الراية للعطور — V13: إصلاح خلطات العطور سحابياً + وصف الخلطة + فحص واضح للأخطاء
+-- شغّل هذا الملف مرة واحدة في Supabase SQL Editor. لا يحذف الخلطات القديمة.
+
+create extension if not exists pgcrypto;
+
+-- جدول الخلطات
+create table if not exists public.mixes (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  gender text,
+  desc text default '',
+  photo text default '',
+  photo_path text default '',
+  created_by uuid references auth.users(id),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+-- ترقية الجداول القديمة بدون حذف البيانات
+alter table public.mixes add column if not exists gender text;
+alter table public.mixes add column if not exists desc text default '';
+alter table public.mixes add column if not exists photo text default '';
+alter table public.mixes add column if not exists photo_path text default '';
+alter table public.mixes add column if not exists created_by uuid references auth.users(id);
+alter table public.mixes add column if not exists created_at timestamptz not null default now();
+alter table public.mixes add column if not exists updated_at timestamptz not null default now();
+
+update public.mixes set gender='كلا الجنسين' where nullif(trim(gender),'') is null or gender not in ('رجالي','نسائي','كلا الجنسين');
+update public.mixes set desc='' where desc is null;
+alter table public.mixes alter column gender set not null;
+
+do $$ begin
+  alter table public.mixes add constraint mixes_gender_check check (gender in ('رجالي','نسائي','كلا الجنسين'));
+exception when duplicate_object then null;
+end $$;
+
+-- جدول مكونات الخلطات: أسماء العطور تُحفظ كنص، ولا يشترط وجودها في المخزون.
+create table if not exists public.mix_items (
+  id uuid primary key default gen_random_uuid(),
+  mix_id uuid not null references public.mixes(id) on delete cascade,
+  product_id uuid null references public.products(id) on delete set null,
+  perfume_name text,
+  position integer not null check (position between 1 and 10),
+  unique (mix_id, position)
+);
+
+alter table public.mix_items add column if not exists product_id uuid null references public.products(id) on delete set null;
+alter table public.mix_items add column if not exists perfume_name text;
+alter table public.mix_items add column if not exists position integer;
+
+update public.mix_items mi set perfume_name=p.name from public.products p
+where mi.product_id=p.id and nullif(trim(mi.perfume_name),'') is null;
+update public.mix_items set position=sub.rn
+from (select id,row_number() over(partition by mix_id order by position nulls last,id) rn from public.mix_items) sub
+where public.mix_items.id=sub.id and public.mix_items.position is null;
+delete from public.mix_items where nullif(trim(perfume_name),'') is null;
+
+alter table public.mix_items alter column perfume_name set not null;
+alter table public.mix_items alter column position set not null;
+
+-- حفظ/تعديل الخلطة + الوصف + المكونات داخل السحابة في عملية واحدة.
+drop function if exists public.save_mixture(uuid,text,text,text,uuid[]);
+drop function if exists public.save_mixture(uuid,text,text,text,text[]);
+create or replace function public.save_mixture(
+  p_id uuid, p_name text, p_desc text, p_gender text, p_photo text, p_perfume_names text[]
+) returns uuid
+language plpgsql security invoker set search_path=public as $$
+declare v_id uuid; v_count integer; v_name text; i integer:=0;
+begin
+  if auth.uid() is null then raise exception 'AUTH_REQUIRED'; end if;
+  if nullif(trim(p_name),'') is null then raise exception 'INVALID_NAME'; end if;
+  if p_gender not in ('رجالي','نسائي','كلا الجنسين') then raise exception 'INVALID_GENDER'; end if;
+  if p_perfume_names is null then raise exception 'INVALID_PERFUMES'; end if;
+
+  select count(*) into v_count from unnest(p_perfume_names) x where nullif(trim(x),'') is not null;
+  if v_count < 2 or v_count > 10 then raise exception 'MIX_MUST_HAVE_2_TO_10'; end if;
+  if v_count <> (select count(distinct lower(trim(x))) from unnest(p_perfume_names) x where nullif(trim(x),'') is not null) then
+    raise exception 'DUPLICATE_PERFUME_NAME';
+  end if;
+
+  if p_id is null then
+    insert into public.mixes(name,desc,gender,photo,created_by)
+    values(trim(p_name),coalesce(trim(p_desc),''),p_gender,coalesce(p_photo,''),auth.uid())
+    returning id into v_id;
+  else
+    v_id:=p_id;
+    update public.mixes set name=trim(p_name),desc=coalesce(trim(p_desc),''),gender=p_gender,photo=coalesce(p_photo,''),updated_at=now() where id=v_id;
+    if not found then raise exception 'MIX_NOT_FOUND'; end if;
+    delete from public.mix_items where mix_id=v_id;
+  end if;
+
+  foreach v_name in array p_perfume_names loop
+    if nullif(trim(v_name),'') is not null then
+      i:=i+1;
+      insert into public.mix_items(mix_id,perfume_name,position) values(v_id,trim(v_name),i);
+    end if;
+  end loop;
+  return v_id;
+end; $$;
+
+grant execute on function public.save_mixture(uuid,text,text,text,text,text[]) to authenticated;
+
+alter table public.mixes enable row level security;
+alter table public.mix_items enable row level security;
+drop policy if exists mixes_all on public.mixes;
+create policy mixes_all on public.mixes for all to authenticated using(true) with check(true);
+drop policy if exists mix_items_all on public.mix_items;
+create policy mix_items_all on public.mix_items for all to authenticated using(true) with check(true);
+
+-- Realtime للخلطات والمكونات.
+do $$ begin alter publication supabase_realtime add table public.mixes; exception when duplicate_object then null; end $$;
+do $$ begin alter publication supabase_realtime add table public.mix_items; exception when duplicate_object then null; end $$;
+
+-- سجل النشاط اختياري: إذا كانت دالة log_activity موجودة نربطها، وإلا لا نوقف التحديث.
+do $$ begin
+  if to_regprocedure('public.log_activity()') is not null then
+    execute 'drop trigger if exists mixes_activity on public.mixes';
+    execute 'create trigger mixes_activity after insert or update or delete on public.mixes for each row execute procedure public.log_activity()';
+  end if;
+end $$;
+
+notify pgrst, 'reload schema';

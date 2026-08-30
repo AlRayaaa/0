@@ -1,0 +1,511 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#111827"><title>الراية للعطور — إدارة سحابية</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+</head>
+<body>
+<header class="app-header">
+  <div class="header-left">
+    <button id="userBadge" class="userbadge" type="button" title="إعدادات الحساب"><span class="userbadge-icon">👤</span><span class="userbadge-name">غير مسجل</span></button>
+    <button id="theme" class="theme-switch" type="button" title="تغيير الوضع">🌙<span class="theme-label">الوضع</span></button>
+  </div>
+  <div class="brand header-brand"><div class="brand-logo"><img src="alraya-logo.jpg" alt="شعار الراية للعطور"></div><div><h1>الراية للعطور</h1><span>إدارة المحل والمخزن</span></div></div>
+  <div class="header-right">
+    <button class="primary" id="newBtn">＋ إضافة منتج</button>
+    <button id="headerSearch" class="header-search" type="button" title="بحث">🔎<span>بحث</span></button>
+  </div>
+</header>
+<div id="cloudStatus" class="status"></div>
+<nav id="nav"><button class="on" data-page="home">الرئيسية</button><button data-page="inventory">المخزن</button><button data-page="mixes">خلطات العطور</button><button data-page="shortages">النقوصات</button><button data-page="debts">الديون</button><button data-page="notes">الملاحظات</button><button data-page="activity">سجل النشاط</button></nav>
+<main>
+<section id="home" class="page">
+ <div class="stats"><article><small>الأصناف</small><b id="cnt">0</b></article><article><small>القطع</small><b id="units">0</b></article><article><small>قيمة المخزون</small><b id="stock">0</b><i>د.ع</i></article><article><small>مخزون منخفض</small><b id="low">0</b></article></div>
+ <div class="two"><div class="box"><div class="title"><h2>آخر الأصناف</h2><button data-go="inventory">عرض الكل</button></div><div id="recent"></div></div><div class="box"><h2>تنبيهات المخزون</h2><div id="alerts"></div></div></div>
+ <div class="box"><div class="title"><h2>آخر النشاطات</h2><button data-go="activity">سجل النشاط</button></div><div id="homeActivity"></div></div>
+</section>
+<section id="inventory" class="page hide"><div class="box"><div class="searchbar"><input id="search" placeholder="🔎 ابحث بالاسم، الماركة، الباركود، الكود..."><select id="category"><option value="">كل الأنواع</option><option>زيوت عطرية</option><option>عطور جاهزة</option><option>بخورات</option><option>معطرات</option><option>معطرات جسم</option><option>علب بلاستيك</option><option>علب زجاج</option><option>كحول</option><option>فوحات</option><option>علب هداية</option><option>أصلي</option><option>أخرى</option></select><select id="stockFilter"><option value="">كل حالات المخزون</option><option value="available">متوفر</option><option value="low">منخفض</option><option value="out">نافد</option></select><select id="sortBy"><option value="newest">الأحدث إضافة</option><option value="updated">آخر تعديل</option><option value="name">الاسم</option><option value="cat">النوع / الفئة</option><option value="retail">سعر المفرد : في المحل</option><option value="buy">سعر شراء التاجر : بغداد</option><option value="qty">الكمية</option></select><button type="button" id="sortDir" class="sortbtn" data-dir="desc">↓ تنازلي</button><button class="primary" id="addBtn">＋ إضافة منتج</button></div><div class="listmeta"><span id="resultCount">0 صنف</span><span class="muted">يمكنك ترتيب القائمة حسب النوع أو السعر أو الكمية</span></div><div id="grid" class="grid"></div></div></section>
+<section id="mixes" class="page hide"><div class="box"><div class="searchbar mix-searchbar"><input id="mixSearch" placeholder="🔎 ابحث باسم عطر أو اسم الخلطة لمعرفة أين موجود واختيار الخلطة..."><select id="mixGender"><option value="">كل الأنواع</option><option value="رجالي">رجالي</option><option value="نسائي">نسائي</option><option value="كلا الجنسين">كلا الجنسين</option></select><button class="primary" id="mixAddBtn" type="button">＋ إضافة خلطة</button></div><div class="listmeta"><span id="mixResultCount">0 خلطة</span><span class="muted">كل خلطة تحتوي من 2 إلى 10 عطور، ويمكن إضافة وصف للخلطة.</span></div><div id="mixGrid" class="grid"></div></div></section>
+<section id="shortages" class="page hide"><div class="box"><div class="title"><h2>قائمة النقوصات</h2><button class="primary" id="shortageBtn">＋ إضافة نقص</button></div><p class="muted">الأشياء التي يحتاجها المحل للشراء.</p><div id="shortagesList"></div></div></section>
+<section id="debts" class="page hide"><div class="box"><div class="title"><h2>قائمة الديون</h2><button class="primary" id="debtBtn">＋ إضافة دين</button></div><p class="muted">قائمة الأشخاص أو الجهات التي عليها ديون للمحل، مع تفاصيل الدين ومن قام بإضافته.</p><div id="debtsList"></div></div></section>
+<section id="notes" class="page hide"><div class="box"><div class="title"><h2>ملاحظات وأمور المحل</h2><button class="primary" id="noteBtn">＋ ملاحظة</button></div><div id="notesList"></div></div></section>
+<section id="activity" class="page hide"><div class="box"><div class="title"><h2>سجل النشاط والتعديلات</h2><span class="muted">سجل محفوظ للسحابة: من فعل ماذا ومتى وما الذي تغيّر</span></div><div class="activityFilters"><select id="activityAction"><option value="">كل العمليات</option><option value="INSERT">إضافة</option><option value="UPDATE">تعديل</option><option value="DELETE">حذف</option></select><select id="activityEntity"><option value="">كل الأقسام</option><option value="products">الأصناف</option><option value="notes">الملاحظات</option><option value="mixes">خلطات العطور</option></select></div><div id="activityList"></div></div></section>
+</main>
+
+<div class="modal auth-only" id="auth"><form id="authForm" class="modalbox small">
+<div class="authhead"><div class="authicon">✦</div><div><h2 id="authTitle">تسجيل الدخول</h2><p class="muted" id="authHint">ادخل بالبريد الإلكتروني وكلمة السر للمتابعة.</p></div></div><label>البريد الإلكتروني <input id="authEmail" type="email" required autocomplete="username" inputmode="email" autofocus></label><label>كلمة السر <input id="authPassword" type="password" minlength="6" required autocomplete="current-password"></label><div class="actions"><button class="primary login-submit" id="authSubmit" type="submit">دخول</button></div><div class="login-status" id="loginStatus" aria-live="polite"></div></form></div>
+
+<div class="modal" id="account"><div class="modalbox small accountbox"><button type="button" class="close" id="accountClose">×</button><div class="account-hero"><div class="avatar" id="accountAvatar">م</div><div><h2>حسابي</h2><p class="muted">إدارة بيانات الدخول بسهولة</p></div></div><div class="account-card"><small>اسم الحساب الحالي</small><b id="accountName">—</b><small>البريد الحالي</small><b id="accountEmail">—</b></div><form id="accountForm"><h3>إعدادات الحساب</h3><label>تغيير اسم الحساب <input id="newName" maxlength="60" placeholder="اكتب الاسم الجديد" autocomplete="name"></label><label>البريد الإلكتروني الجديد <input id="newEmail" type="email" placeholder="اتركه فارغاً إذا لا تريد تغييره" autocomplete="email"></label><label>كلمة المرور الجديدة <input id="newPassword" type="password" minlength="6" placeholder="اتركها فارغة إذا لا تريد تغييرها" autocomplete="new-password"></label><p class="muted account-note">يمكن تغيير الاسم أو البريد أو كلمة المرور بشكل مستقل. عند تغيير البريد قد يطلب Supabase تأكيد البريد الجديد.</p><div class="actions"><button type="button" id="accountCancel">إغلاق</button><button class="primary" type="submit">حفظ التغييرات</button></div></form><button type="button" class="textbtn dangerText" id="accountSignOut">تسجيل الخروج</button></div></div>
+
+<div class="modal" id="pm"><form id="pf" class="modalbox"><button type="button" class="close" id="pc">×</button><h2 id="pt">إضافة منتج</h2><div class="photo"><img id="photoPreview"><label>📷 صورة المنتج<input id="photo" type="file" accept="image/*"></label><small class="muted">الصورة ترفع تلقائياً إلى التخزين السحابي.</small></div>
+<div class="form"><label>اسم المنتج *<input id="name" required></label><label>الماركة<input id="brand"></label><label>الفئة<select id="cat"><option value="" selected>اختر الفئة</option><option>زيوت عطرية</option><option>عطور جاهزة</option><option>بخورات</option><option>معطرات</option><option>معطرات جسم</option><option>علب بلاستيك</option><option>علب زجاج</option><option>كحول</option><option>فوحات</option><option>علب هداية</option><option>أصلي</option><option>أخرى</option></select></label><label>الجنس<select id="gender"><option value="" selected>اختر الجنس</option><option>رجالي</option><option>نسائي</option><option>مشترك</option><option>أخرى</option></select></label><label>الحجم<input id="size" placeholder="100ml"></label><label>التركيز<input id="conc" placeholder="EDP / EDT / Parfum"></label><label>الباركود<input id="barcode"></label><label>كود الصنف<input id="code"></label><label>بلد الصنع<input id="country"></label><label>الكمية<input id="qty" type="number" min="0" placeholder=""></label><label>حد التنبيه<input id="min" type="number" min="0" placeholder=""></label><label>سعر شراء التاجر : بغداد<input id="buy0" type="number" min="0" placeholder=""></label><label>سعر الجملة : داخل المحل<input id="whole" type="number" min="0" placeholder=""></label><label>سعر المفرد : في المحل<input id="retail" type="number" min="0" placeholder=""></label><label>المورد<input id="supplier"></label></div>
+<label>الأسماء البديلة</label><div id="aliases"></div><button type="button" id="addAlias">＋ اسم بديل</button><label>الوصف<textarea id="desc" rows="3"></textarea></label><label>ملاحظات الصنف<textarea id="pnote" rows="3"></textarea></label><div class="actions"><button type="button" id="cancel">إلغاء</button><button class="primary">حفظ الصنف</button></div></form></div>
+<div class="modal" id="dm"><div class="modalbox small"><button type="button" class="close" id="dc">×</button><div id="details"></div></div></div>
+<div class="modal" id="nm"><form id="nf" class="modalbox small"><button type="button" class="close" id="nc">×</button><h2>إضافة ملاحظة</h2><label>العنوان<input id="nt" required></label><label>النص<textarea id="nx" rows="5" required></textarea></label><div class="actions"><button type="button" id="nc2">إلغاء</button><button class="primary">حفظ</button></div></form></div>
+<div class="modal" id="shortageModal"><form id="shortageForm" class="modalbox small"><button type="button" class="close" id="shortageClose">×</button><h2 id="shortageTitle">إضافة نقص</h2><label>اسم الشيء *<input id="shortageName" required maxlength="120"></label><label>الكمية المطلوبة<input id="shortageQty" type="number" min="1" step="1" value="1"></label><label>الأولوية<select id="shortagePriority"><option value="normal">عادية</option><option value="high">مهمة</option><option value="urgent">عاجلة</option></select></label><label>تفاصيل النقص<textarea id="shortageNote" rows="4" placeholder="مثال: حجم 100 مل، لون أسود، عدد 10، من مورد معين..."></textarea></label><div class="photo shortage-photo"><img id="shortagePhotoPreview" src="" alt="صورة النقوص"><label>🖼️ إضافة صورة اختيارية<input id="shortagePhoto" type="file" accept="image/jpeg,image/png,image/webp"></label><button type="button" id="removeShortagePhoto" class="remove-photo">إزالة الصورة</button></div><div class="actions"><button type="button" id="shortageCancel">إلغاء</button><button class="primary" type="submit">حفظ</button></div></form></div>
+<div class="modal" id="debtModal"><form id="debtForm" class="modalbox small"><button type="button" class="close" id="debtClose">×</button><h2 id="debtTitle">إضافة دين</h2><label>اسم الشخص / الجهة *<input id="debtPerson" required maxlength="120"></label><label>تفاصيل الدين<textarea id="debtNote" rows="5" placeholder="مثال: دين عطور، منتجات مستلمة، المبلغ المتفق عليه، موعد التسديد، أو أي تفاصيل مهمة..."></textarea></label><div class="photo debt-photo"><img id="debtPhotoPreview" src="" alt="صورة تفاصيل الدين"><label>🖼️ إضافة صورة اختيارية<input id="debtPhoto" type="file" accept="image/jpeg,image/png,image/webp,image/gif"></label><button type="button" id="removeDebtPhoto" class="remove-photo" style="display:none">إزالة الصورة</button></div><div class="actions"><button type="button" id="debtCancel">إلغاء</button><button class="primary" type="submit">حفظ</button></div></form></div>
+<div class="modal" id="mixModal"><form id="mixForm" class="modalbox"><button type="button" class="close" id="mixClose">×</button><h2 id="mixTitle">إضافة خلطة عطور</h2><div class="photo"><img id="mixPhotoPreview" src="" alt="صورة الخلطة"><label>📷 صورة الخلطة<input id="mixPhoto" type="file" accept="image/jpeg,image/png,image/webp,image/gif"></label><small class="muted">الصورة تُرفع إلى Supabase Storage تلقائياً.</small><button type="button" id="removeMixPhoto" class="remove-photo" style="display:none">إزالة الصورة</button></div><div class="form"><label>اسم الخلطة *<input id="mixName" maxlength="120" required placeholder="مثال: عطر المساء"></label><label>وصف الخلطة<textarea id="mixDesc" rows="3" maxlength="500" placeholder="اكتب وصفاً مختصراً للخلطة، مثل الرائحة أو المناسبة أو ملاحظات الاستخدام..."></textarea></label><label>نوع الخلطة *<select id="mixType" required><option value="">اختر النوع</option><option value="رجالي">رجالي</option><option value="نسائي">نسائي</option><option value="كلا الجنسين">كلا الجنسين</option></select></label><div class="mix-picker"><div class="mix-picker-head"><b>أسماء العطور في الخلطة</b><span id="mixSelectedCount" class="tag">0 / 10</span></div><div id="mixNameInputs" class="mix-name-inputs"></div><button type="button" id="addMixPerfume" class="secondary">＋ إضافة عطر</button><small class="muted">اكتب أسماء العطور بنفسك، من عطرين إلى 10 عطور حسب اختيارك. لا يلزم أن تكون العطور مسجلة مسبقاً في قائمة الأصناف.</small></div></div><div class="actions"><button type="button" id="mixCancel">إلغاء</button><button class="primary" type="submit">حفظ الخلطة</button></div></form></div>
+<div class="modal" id="setup"><form id="setupForm" class="modalbox small setupbox"><button type="button" class="close" id="setupClose">×</button><h2>☁️ إعداد السحابة — خطوة بخطوة</h2><div class="setupsteps"><div class="step"><b>1</b><span>أنشئ مشروع Supabase</span></div><div class="step"><b>2</b><span>شغّل كود قاعدة البيانات</span></div><div class="step"><b>3</b><span>الصق بيانات المشروع هنا</span></div><div class="step"><b>4</b><span>اختبر الاتصال ثم أنشئ حسابك</span></div></div><div class="setup-actions"><a class="buttonlike" href="https://supabase.com/dashboard" target="_blank" rel="noopener">فتح Supabase ↗</a><button type="button" id="copySql">📋 نسخ كود قاعدة البيانات</button></div><p id="setupHelp" class="muted">إذا كنت قد أنشأت المشروع بالفعل، انسخ كود قاعدة البيانات من الزر أعلاه والصقه في <b>SQL Editor</b> داخل Supabase ثم اضغط Run.</p><label>Project URL<input id="setupUrl" placeholder="https://xxxxx.supabase.co" required></label><label>anon / publishable key<textarea id="setupKey" rows="4" required></textarea></label><div id="setupCheck" class="checkbox"></div><div class="actions"><button type="button" id="setupCancel">إلغاء</button><button type="button" id="testSetup">🔎 فحص الاتصال</button><button class="primary">حفظ والاتصال</button></div></form></div><div id="toast"></div>
+<script id="setupSql" type="text/plain">-- الراية للعطور — Supabase setup
+-- شغّل هذا الملف كاملاً داخل Supabase SQL Editor.
+create extension if not exists pgcrypto;
+
+create table if not exists public.profiles (
+  id uuid primary key references auth.users(id) on delete cascade,
+  display_name text not null default 'مستخدم',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.products (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  brand text default '',
+  cat text default 'عطور',
+  gender text default 'رجالي',
+  size text default '',
+  conc text default '',
+  barcode text default '',
+  code text default '',
+  country text default '',
+  qty numeric not null default 0,
+  min numeric not null default 3,
+  buy numeric not null default 0,
+  wholesale numeric not null default 0,
+  retail numeric not null default 0,
+  supplier text default '',
+  desc text default '',
+  note text default '',
+  aliases text[] not null default '{}',
+  photo text default '',
+  photo_path text default '',
+  created_by uuid references auth.users(id),
+  updated_by uuid references auth.users(id),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+-- إصلاح/ترقية: إذا كانت قاعدة البيانات القديمة لا تحتوي photo_path، أضف العمود بدون حذف البيانات.
+alter table public.products add column if not exists photo_path text default '';
+
+create table if not exists public.sales (
+  id uuid primary key default gen_random_uuid(),
+  product_id uuid references public.products(id) on delete set null,
+  name text not null,
+  qty numeric not null,
+  total numeric not null,
+  buy numeric not null default 0,
+  created_by uuid references auth.users(id),
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.purchases (
+  id uuid primary key default gen_random_uuid(),
+  product_id uuid references public.products(id) on delete set null,
+  name text not null,
+  qty numeric not null,
+  price numeric not null,
+  dealer text default '',
+  invoice text default '',
+  note text default '',
+  photo text default '',
+  created_by uuid references auth.users(id),
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.notes (
+  id uuid primary key default gen_random_uuid(),
+  title text not null,
+  text text not null,
+  created_by uuid references auth.users(id),
+  created_at timestamptz not null default now()
+);
+
+
+create table if not exists public.shortages (
+  id uuid primary key default gen_random_uuid(), name text not null, qty numeric not null default 1, priority text not null default 'normal', note text default '', photo text default '', purchased boolean not null default false, created_by uuid references auth.users(id), created_at timestamptz not null default now(), updated_at timestamptz not null default now()
+);
+create table if not exists public.debts (
+  id uuid primary key default gen_random_uuid(), person text not null, phone text default '', amount numeric not null default 0, paid numeric not null default 0, note text default '', created_by uuid references auth.users(id), created_at timestamptz not null default now(), updated_at timestamptz not null default now()
+);
+
+create table if not exists public.activity_log (
+  id bigint generated by default as identity primary key,
+  user_id uuid references auth.users(id) on delete set null,
+  user_name text not null default 'مستخدم',
+  action text not null,
+  entity_type text not null,
+  entity_id text,
+  entity_name text,
+  details jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+
+alter table public.activity_log add column if not exists details jsonb not null default '{}'::jsonb;
+
+create or replace function public.current_display_name()
+returns text language sql stable as $$
+  select coalesce((select display_name from public.profiles where id = auth.uid()), 'مستخدم')
+$$;
+
+create or replace function public.handle_new_user()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  insert into public.profiles(id, display_name)
+  values (new.id, coalesce(nullif(new.raw_user_meta_data->>'display_name',''), split_part(new.email,'@',1)));
+  return new;
+end;
+$$;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+after insert on auth.users
+for each row execute procedure public.handle_new_user();
+
+create or replace function public.log_activity()
+returns trigger language plpgsql security definer set search_path = public as $$
+declare
+  n text; oldj jsonb; newj jsonb; changes jsonb := '{}'::jsonb; k text; ov jsonb; nv jsonb;
+begin
+  n := case when tg_op='DELETE' then old.name else new.name end;
+  if tg_op='UPDATE' then
+    oldj := to_jsonb(old); newj := to_jsonb(new);
+    for k in select key from jsonb_each(oldj) loop
+      if k in ('updated_at','updated_by') then continue; end if;
+      ov := oldj->k; nv := newj->k;
+      if ov is distinct from nv then changes := changes || jsonb_build_object(k,jsonb_build_object('from',ov,'to',nv)); end if;
+    end loop;
+  elsif tg_op='INSERT' then
+    changes := jsonb_build_object('created',true);
+  else
+    changes := jsonb_build_object('deleted',true);
+  end if;
+  insert into public.activity_log(user_id,user_name,action,entity_type,entity_id,entity_name,details)
+  values (auth.uid(), public.current_display_name(), tg_op, tg_table_name,
+          coalesce((case when tg_op='DELETE' then old.id else new.id end)::text,''), n,
+          jsonb_build_object('changes',changes));
+  return case when tg_op='DELETE' then old else new end;
+end;
+$$;
+
+drop trigger if exists products_activity on public.products;
+create trigger products_activity after insert or update or delete on public.products
+for each row execute procedure public.log_activity();
+
+create or replace function public.log_note_activity()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  insert into public.activity_log(user_id,user_name,action,entity_type,entity_id,entity_name,details)
+  values (auth.uid(), public.current_display_name(), tg_op, 'notes',
+          coalesce((case when tg_op='DELETE' then old.id else new.id end)::text,''),
+          case when tg_op='DELETE' then old.title else new.title end,
+          jsonb_build_object('changes',jsonb_build_object('title',case when tg_op='DELETE' then old.title else new.title end)));
+  return case when tg_op='DELETE' then old else new end;
+end;
+$$;
+drop trigger if exists notes_activity on public.notes;
+create trigger notes_activity after insert or update or delete on public.notes
+for each row execute procedure public.log_note_activity();
+
+create or replace function public.log_named_activity()
+returns trigger language plpgsql security definer set search_path = public as $$
+declare n text; oldj jsonb; newj jsonb; changes jsonb := '{}'::jsonb; k text; ov jsonb; nv jsonb;
+begin
+  n := case when tg_op='DELETE' then old.name else new.name end;
+  if tg_op='UPDATE' then
+    oldj := to_jsonb(old); newj := to_jsonb(new);
+    for k in select key from jsonb_each(oldj) loop
+      if k in ('created_at') then continue; end if;
+      ov := oldj->k; nv := newj->k;
+      if ov is distinct from nv then changes := changes || jsonb_build_object(k,jsonb_build_object('from',ov,'to',nv)); end if;
+    end loop;
+  elsif tg_op='INSERT' then changes := jsonb_build_object('created',true);
+  else changes := jsonb_build_object('deleted',true); end if;
+  insert into public.activity_log(user_id,user_name,action,entity_type,entity_id,entity_name,details)
+  values (auth.uid(), public.current_display_name(), tg_op, tg_table_name,
+          coalesce((case when tg_op='DELETE' then old.id else new.id end)::text,''), n,
+          jsonb_build_object('changes',changes));
+  return case when tg_op='DELETE' then old else new end;
+end;
+$$;
+
+drop trigger if exists sales_activity on public.sales;
+create trigger sales_activity after insert or update or delete on public.sales
+for each row execute procedure public.log_named_activity();
+
+drop trigger if exists purchases_activity on public.purchases;
+create trigger purchases_activity after insert or update or delete on public.purchases
+for each row execute procedure public.log_named_activity();
+
+alter table public.profiles enable row level security;
+alter table public.products enable row level security;
+alter table public.sales enable row level security;
+alter table public.purchases enable row level security;
+alter table public.notes enable row level security;
+alter table public.activity_log enable row level security;
+alter table public.shortages enable row level security;
+alter table public.debts enable row level security;
+
+drop policy if exists profiles_select on public.profiles;
+create policy profiles_select on public.profiles for select to authenticated using (true);
+drop policy if exists profiles_update_own on public.profiles;
+create policy profiles_update_own on public.profiles for update to authenticated using (id=auth.uid()) with check (id=auth.uid());
+
+drop policy if exists products_all on public.products;
+create policy products_all on public.products for all to authenticated using (true) with check (true);
+drop policy if exists sales_all on public.sales;
+create policy sales_all on public.sales for all to authenticated using (true) with check (true);
+drop policy if exists purchases_all on public.purchases;
+create policy purchases_all on public.purchases for all to authenticated using (true) with check (true);
+drop policy if exists notes_all on public.notes;
+create policy notes_all on public.notes for all to authenticated using (true) with check (true);
+drop policy if exists activity_select on public.activity_log;
+create policy activity_select on public.activity_log for select to authenticated using (true);
+drop policy if exists shortages_all on public.shortages; create policy shortages_all on public.shortages for all to authenticated using (true) with check (true);
+drop policy if exists debts_all on public.debts; create policy debts_all on public.debts for all to authenticated using (true) with check (true);
+
+insert into storage.buckets (id,name,public)
+values ('product-images','product-images',true)
+on conflict (id) do update set public=true;
+
+drop policy if exists product_images_read on storage.objects;
+create policy product_images_read on storage.objects for select to public
+using (bucket_id='product-images');
+
+drop policy if exists product_images_insert on storage.objects;
+create policy product_images_insert on storage.objects for insert to authenticated
+with check (bucket_id='product-images');
+
+drop policy if exists product_images_update on storage.objects;
+create policy product_images_update on storage.objects for update to authenticated
+using (bucket_id='product-images') with check (bucket_id='product-images');
+
+drop policy if exists product_images_delete on storage.objects;
+create policy product_images_delete on storage.objects for delete to authenticated
+using (bucket_id='product-images');
+
+-- فعّل Realtime للبيانات التي يجب أن تتحدث عند كل جهاز.
+do $$ begin
+  alter publication supabase_realtime add table public.products;
+exception when duplicate_object then null;
+end $$;
+
+-- Realtime لكل الجداول التشغيلية.
+do $$ begin alter publication supabase_realtime add table public.sales; exception when duplicate_object then null; end $$;
+do $$ begin alter publication supabase_realtime add table public.purchases; exception when duplicate_object then null; end $$;
+do $$ begin alter publication supabase_realtime add table public.notes; exception when duplicate_object then null; end $$;
+do $$ begin alter publication supabase_realtime add table public.activity_log; exception when duplicate_object then null; end $$;
+do $$ begin alter publication supabase_realtime add table public.shortages; exception when duplicate_object then null; end $$;
+do $$ begin alter publication supabase_realtime add table public.debts; exception when duplicate_object then null; end $$;
+
+notify pgrst, 'reload schema';
+
+-- عمليات آمنة وذرّية: تحديث المخزون وتسجيل العملية في خطوة واحدة.
+create or replace function public.record_sale(
+  p_product_id uuid,
+  p_qty numeric,
+  p_price numeric
+) returns void
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare p public.products%rowtype;
+begin
+  if auth.uid() is null then raise exception 'AUTH_REQUIRED'; end if;
+  if p_qty is null or p_qty <= 0 then raise exception 'INVALID_QTY'; end if;
+  if p_price is null or p_price <= 0 then raise exception 'INVALID_PRICE'; end if;
+  select * into p from public.products where id=p_product_id for update;
+  if not found then raise exception 'PRODUCT_NOT_FOUND'; end if;
+  if p.qty < p_qty then raise exception 'INSUFFICIENT_STOCK'; end if;
+  update public.products
+    set qty=p.qty-p_qty, updated_by=auth.uid(), updated_at=now()
+    where id=p_product_id;
+  insert into public.sales(product_id,name,qty,total,buy,created_by)
+    values(p.id,p.name,p_qty,p_qty*p_price,p.buy,auth.uid());
+end;
+$$;
+
+grant execute on function public.record_sale(uuid,numeric,numeric) to authenticated;
+
+create or replace function public.record_purchase(
+  p_product_id uuid,
+  p_qty numeric,
+  p_price numeric,
+  p_dealer text default '',
+  p_invoice text default '',
+  p_note text default ''
+) returns void
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare p public.products%rowtype;
+begin
+  if auth.uid() is null then raise exception 'AUTH_REQUIRED'; end if;
+  if p_qty is null or p_qty <= 0 then raise exception 'INVALID_QTY'; end if;
+  if p_price is null or p_price < 0 then raise exception 'INVALID_PRICE'; end if;
+  select * into p from public.products where id=p_product_id for update;
+  if not found then raise exception 'PRODUCT_NOT_FOUND'; end if;
+  update public.products
+    set qty=p.qty+p_qty, buy=p_price, updated_by=auth.uid(), updated_at=now()
+    where id=p_product_id;
+  insert into public.purchases(product_id,name,qty,price,dealer,invoice,note,created_by)
+    values(p.id,p.name,p_qty,p_price,coalesce(p_dealer,''),coalesce(p_invoice,''),coalesce(p_note,''),auth.uid());
+end;
+$$;
+
+grant execute on function public.record_purchase(uuid,numeric,numeric,text,text,text) to authenticated;
+
+-- منع التكرار الحقيقي للباركود والكود عند تعبئتهما.
+do $$ begin
+  create unique index products_barcode_unique on public.products (barcode)
+    where nullif(trim(barcode),'') is not null;
+exception when duplicate_object then null; when unique_violation then
+  raise notice 'يوجد باركودات مكررة؛ تم تجاوز الفهرس حتى لا تتوقف الترقية.';
+end $$;
+do $$ begin
+  create unique index products_code_unique on public.products (code)
+    where nullif(trim(code),'') is not null;
+exception when duplicate_object then null; when unique_violation then
+  raise notice 'توجد أكواد أصناف مكررة؛ تم تجاوز الفهرس حتى لا تتوقف الترقية.';
+end $$;
+
+-- V13: خلطات العطور سحابياً + وصف الخلطة
+
+-- شغّل هذا الملف مرة واحدة في Supabase SQL Editor. لا يحذف الخلطات القديمة.
+
+create extension if not exists pgcrypto;
+
+-- جدول الخلطات
+create table if not exists public.mixes (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  gender text,
+  desc text default '',
+  photo text default '',
+  photo_path text default '',
+  created_by uuid references auth.users(id),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+-- ترقية الجداول القديمة بدون حذف البيانات
+alter table public.mixes add column if not exists gender text;
+alter table public.mixes add column if not exists desc text default '';
+alter table public.mixes add column if not exists photo text default '';
+alter table public.mixes add column if not exists photo_path text default '';
+alter table public.mixes add column if not exists created_by uuid references auth.users(id);
+alter table public.mixes add column if not exists created_at timestamptz not null default now();
+alter table public.mixes add column if not exists updated_at timestamptz not null default now();
+
+update public.mixes set gender='كلا الجنسين' where nullif(trim(gender),'') is null or gender not in ('رجالي','نسائي','كلا الجنسين');
+update public.mixes set desc='' where desc is null;
+alter table public.mixes alter column gender set not null;
+
+do $$ begin
+  alter table public.mixes add constraint mixes_gender_check check (gender in ('رجالي','نسائي','كلا الجنسين'));
+exception when duplicate_object then null;
+end $$;
+
+-- جدول مكونات الخلطات: أسماء العطور تُحفظ كنص، ولا يشترط وجودها في المخزون.
+create table if not exists public.mix_items (
+  id uuid primary key default gen_random_uuid(),
+  mix_id uuid not null references public.mixes(id) on delete cascade,
+  product_id uuid null references public.products(id) on delete set null,
+  perfume_name text,
+  position integer not null check (position between 1 and 10),
+  unique (mix_id, position)
+);
+
+alter table public.mix_items add column if not exists product_id uuid null references public.products(id) on delete set null;
+alter table public.mix_items add column if not exists perfume_name text;
+alter table public.mix_items add column if not exists position integer;
+
+update public.mix_items mi set perfume_name=p.name from public.products p
+where mi.product_id=p.id and nullif(trim(mi.perfume_name),'') is null;
+update public.mix_items set position=sub.rn
+from (select id,row_number() over(partition by mix_id order by position nulls last,id) rn from public.mix_items) sub
+where public.mix_items.id=sub.id and public.mix_items.position is null;
+delete from public.mix_items where nullif(trim(perfume_name),'') is null;
+
+alter table public.mix_items alter column perfume_name set not null;
+alter table public.mix_items alter column position set not null;
+
+-- حفظ/تعديل الخلطة + الوصف + المكونات داخل السحابة في عملية واحدة.
+drop function if exists public.save_mixture(uuid,text,text,text,uuid[]);
+drop function if exists public.save_mixture(uuid,text,text,text,text[]);
+create or replace function public.save_mixture(
+  p_id uuid, p_name text, p_desc text, p_gender text, p_photo text, p_perfume_names text[]
+) returns uuid
+language plpgsql security invoker set search_path=public as $$
+declare v_id uuid; v_count integer; v_name text; i integer:=0;
+begin
+  if auth.uid() is null then raise exception 'AUTH_REQUIRED'; end if;
+  if nullif(trim(p_name),'') is null then raise exception 'INVALID_NAME'; end if;
+  if p_gender not in ('رجالي','نسائي','كلا الجنسين') then raise exception 'INVALID_GENDER'; end if;
+  if p_perfume_names is null then raise exception 'INVALID_PERFUMES'; end if;
+
+  select count(*) into v_count from unnest(p_perfume_names) x where nullif(trim(x),'') is not null;
+  if v_count < 2 or v_count > 10 then raise exception 'MIX_MUST_HAVE_2_TO_10'; end if;
+  if v_count <> (select count(distinct lower(trim(x))) from unnest(p_perfume_names) x where nullif(trim(x),'') is not null) then
+    raise exception 'DUPLICATE_PERFUME_NAME';
+  end if;
+
+  if p_id is null then
+    insert into public.mixes(name,desc,gender,photo,created_by)
+    values(trim(p_name),coalesce(trim(p_desc),''),p_gender,coalesce(p_photo,''),auth.uid())
+    returning id into v_id;
+  else
+    v_id:=p_id;
+    update public.mixes set name=trim(p_name),desc=coalesce(trim(p_desc),''),gender=p_gender,photo=coalesce(p_photo,''),updated_at=now() where id=v_id;
+    if not found then raise exception 'MIX_NOT_FOUND'; end if;
+    delete from public.mix_items where mix_id=v_id;
+  end if;
+
+  foreach v_name in array p_perfume_names loop
+    if nullif(trim(v_name),'') is not null then
+      i:=i+1;
+      insert into public.mix_items(mix_id,perfume_name,position) values(v_id,trim(v_name),i);
+    end if;
+  end loop;
+  return v_id;
+end; $$;
+
+grant execute on function public.save_mixture(uuid,text,text,text,text,text[]) to authenticated;
+
+alter table public.mixes enable row level security;
+alter table public.mix_items enable row level security;
+drop policy if exists mixes_all on public.mixes;
+create policy mixes_all on public.mixes for all to authenticated using(true) with check(true);
+drop policy if exists mix_items_all on public.mix_items;
+create policy mix_items_all on public.mix_items for all to authenticated using(true) with check(true);
+
+-- Realtime للخلطات والمكونات.
+do $$ begin alter publication supabase_realtime add table public.mixes; exception when duplicate_object then null; end $$;
+do $$ begin alter publication supabase_realtime add table public.mix_items; exception when duplicate_object then null; end $$;
+
+-- سجل النشاط اختياري: إذا كانت دالة log_activity موجودة نربطها، وإلا لا نوقف التحديث.
+do $$ begin
+  if to_regprocedure('public.log_activity()') is not null then
+    execute 'drop trigger if exists mixes_activity on public.mixes';
+    execute 'create trigger mixes_activity after insert or update or delete on public.mixes for each row execute procedure public.log_activity()';
+  end if;
+end $$;
+
+notify pgrst, 'reload schema';
+
+notify pgrst, 'reload schema';
+
+-- دعم صورة اختيارية للنقوصات
+alter table public.shortages add column if not exists photo text default '';
+notify pgrst, 'reload schema';
+</script>
+<script src="app.js"></script>
+</body></html>
+<script>
+// Database migration note: run supabase-setup.sql in Supabase SQL Editor.
+</script>
